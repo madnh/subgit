@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+
+# vim: ft=bash
+
+# Subgit
+# ======
+# Author: MaDnh
+# Repository: https://github.com/madnh/subgit
+# License: MIT
+# ======
+# This module management a bare git repository inside of an git repository. Subgit module will put inside of your current repo: `.git/subgit`.
+# You can use SUBGIT environment variable to name your subgit folder. Example: `SUBGIT=foo subgit init` will create `.git/subgit-foo` as your subgit folder.
+#
+# Environment variable:
+#   SUBGIT - name of subgit folder. If specified then target folder will be ".git/subgit-$SUBGIT", else ".git/subgit"
+#   IS_SUBGIT_SUBSHELL - if this env is exists then you are on subshell of subgit
+# Usage:
+#   subgit init - initialize subgit
+#   subgit list - list all subgit repos. Alias: subgit ls
+#   subgit remove - remove subgit. Alias subgit rm
+#   subgit shell - enter subshell of subgit, this subsell already define GIT_DIR and GIT_WORK_TREE. You can run commands like `git status`, `git commit`, etc.
+#   subgit lazygit - run lazygit on subgit. This is a shortcut for `subgit shell` then run `lazygit`. Alias: subgit lazy
+#   subgit <git command> - execute git command in subgit. Example: subgit status, subgit commit, subgit branch, etc.
+
+CURRENT_GIT_WORKING_DIR=$(git rev-parse --show-toplevel)
+CURRENT_GIT_DIR=$(git rev-parse --git-dir)
+SUBGIT="${SUBGIT}"
+SUBGIT_DIRNAME="subgit"
+
+# if $SUBGIT is exists then use name as "subgit-$SUBGIT" else use default name "subgit"
+if [ ! -z "${SUBGIT}" ]; then
+  SUBGIT_DIRNAME="subgit-${SUBGIT}"
+fi
+
+SUBGIT_DIR="${CURRENT_GIT_DIR}/${SUBGIT_DIRNAME}"
+
+# if 1st argument is "init" then init subgit
+if [ "$1" == "init" ]; then
+  if [ ! -d "${SUBGIT_DIR}" ]; then
+    cd $CURRENT_GIT_DIR && mkdir "${SUBGIT_DIRNAME}"
+    cd "${SUBGIT_DIRNAME}" && git init --bare
+
+    echo "Subgit initialized successfully at ${SUBGIT_DIR}"
+  else
+    echo "Subgit already initialized at ${SUBGIT_DIR}"
+  fi
+
+  exit 0
+fi
+
+# if 1st argument is "list" then list all subgit repos
+if [ "$1" == "list" ]; then
+  echo "List of subgit repos:"
+  ls -1 "${CURRENT_GIT_DIR}" | grep "^subgit"
+  exit 0
+fi
+
+# if 1st is shell then execute a subshell
+if [ "$1" == "shell" ]; then
+  # check if has env IS_SUBGIT_SUBSHELL then already on subshell, exit with 1 status code
+  if [ ! -z "${IS_SUBGIT_SUBSHELL}" ]; then
+    echo "You are already on subshell of subgit."
+    exit 1
+  fi
+
+  echo "Welcome to subshell of subgit. You are now on a subshell where git repo is ${SUBGIT_DIR}"
+  GIT_DIR="${SUBGIT_DIR}" GIT_WORK_TREE="${CURRENT_GIT_WORKING_DIR}" IS_SUBGIT_SUBSHELL=1 $SHELL
+  echo "Welcome back! You are now on your normal shell"
+  exit 0
+fi
+
+# if 1st is lazygit or lazy then execute lazygit
+# this is a shortcut for run lazygit on subgit, so you don't need to jump to `subgit shell` then run lazygit
+if [ "$1" == "lazygit" ] || [ "$1" == "lazy" ]; then
+  lazygit --work-tree="${CURRENT_GIT_WORKING_DIR}" --git-dir="${SUBGIT_DIR}"
+  exit 0
+fi
+
+# Forwards all arguments to git
+git --git-dir="${SUBGIT_DIR}" --work-tree="${CURRENT_GIT_WORKING_DIR}" $@
