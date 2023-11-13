@@ -26,6 +26,18 @@ project-x/
 
 `.env` file ignored by `.gitignore` in current git repo, but tracking by `.git/subgit` repo.
 
+## Install
+
+Just download [**subgit**](https://raw.githubusercontent.com/madnh/subgit/master/subgit) file, then put somewhere you can access in terminal.
+
+Example: store in `$HOME/bin/` folder
+
+```sh
+wget https://raw.githubusercontent.com/madnh/subgit/master/subgit -O $HOME/bin/subgit
+
+chmod +x $HOME/bin/subgit
+```
+
 ## Usage
 
 ```
